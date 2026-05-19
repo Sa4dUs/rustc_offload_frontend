@@ -9,7 +9,7 @@ extern crate libc;
 #[cfg(target_os = "linux")]
 use core::mem;
 #[cfg(target_os = "linux")]
-use libc::c_char;
+use libc::{c_char, printf};
 
 use core::offload::offload_kernel;
 
@@ -22,14 +22,14 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 #[unsafe(no_mangle)]
 #[inline(never)]
 fn main() {
+    let mut x = [0.0f64];
+    core::intrinsics::offload::<_, (&mut [f64],), ()>(foo, [1, 1, 1], [256, 1, 1], (&mut x,));
     unsafe {
-        let x: *mut [f64; 256] =
-            libc::calloc(256, (mem::size_of::<f64>()) as libc::size_t) as *mut [f64; 256];
-        core::intrinsics::offload::<_, (*mut [f64; 256],), ()>(foo, [1, 1, 1], [256, 1, 1], (x,));
+        printf(c"debug: %f\n".as_ptr(), x[0]);
     }
 }
 
 #[offload_kernel]
-fn foo(x: *mut [f64; 256]) {
-    unsafe { (*x)[0] = 21.0 };
+fn foo(x: &mut [f64]) {
+    (*x)[0] = 21.0;
 }
