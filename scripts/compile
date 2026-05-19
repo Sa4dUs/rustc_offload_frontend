@@ -1,0 +1,10 @@
+#!/bin/bash
+
+export CLANG_LINKER_WRAPPER="/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/llvm/bin/clang-linker-wrapper"
+export LD_LIBRARY_PATH="/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/llvm/build/lib:/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/stage1/lib:/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/offload/lib:$LD_LIBRARY_PATH"
+
+RUSTFLAGS="-Ctarget-cpu=sm_89 --emit=llvm-bc,llvm-ir -Zoffload=Device -Csave-temps -Zunstable-options" cargo +offload build -Zunstable-options -r -v --target nvptx64-nvidia-cuda -Zbuild-std=core
+
+RUSTFLAGS="--emit=llvm-bc,llvm-ir -Csave-temps -Zoffload=Host=/home/mdominguez/workspace/offload/rustc_offload_frontend/target/nvptx64-nvidia-cuda/release/deps/host.out -Zunstable-options" cargo +offload build -r
+
+$CLANG_LINKER_WRAPPER "--should-extract=sm_89" "--device-compiler=nvptx64-nvidia-cuda=-march=sm_89" "--device-compiler=nvptx64-nvidia-cuda=-save-temps=cwd" "--device-linker=nvptx-nvidia-cuda=-lompdevice" "--host-triple=x86_64-unknown-linux-gnu" "--save-temps" "--linker-path=/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/lld/bin/ld.lld" "--hash-style=gnu" "--eh-frame-hdr" "-m" "elf_x86_64" "-pie" "-dynamic-linker" "/usr/lib64/ld-linux-x86-64.so.2" "-o" "bare" "/usr/lib/x86_64-linux-gnu/Scrt1.o" "/usr/lib/x86_64-linux-gnu/crti.o" "/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o" "-L/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/llvm/lib" "-L/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/llvm/lib/clang/22/include" "-L/lib64" "-L/usr/lib64" "-L/lib" "-L/usr/lib" "target/release/deps/host.o" "-lstdc++" "-lm" "-lomp" "-lomptarget" "-L/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/llvm/lib" "-lgcc_s" "-lgcc" "-lpthread" "-lc" "-lgcc_s" "-lgcc" "/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o" "/usr/lib/x86_64-linux-gnu/crtn.o" "-L/usr/lib/gcc/x86_64-linux-gnu/13" "-L/usr/lib/x86_64-linux-gnu" "-L/home/mdominguez/workspace/rust/build/x86_64-unknown-linux-gnu/offload/lib"

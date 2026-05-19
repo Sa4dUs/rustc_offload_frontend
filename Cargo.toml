@@ -1,0 +1,20 @@
+[package]
+name = "rustc_offload_frontend"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+libc = { version = "0.2.175", default-features = false }
+
+[features]
+
+[profile.release]
+lto = "fat"
+panic = "abort"
+
+[profile.dev]
+lto = "fat"
+panic = "abort"
