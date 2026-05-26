@@ -93,7 +93,7 @@ fn global_thread_dim() -> Dim3 {
     Dim3 { x: 0, y: 0, z: 0 }
 }
 
-pub trait PartitioningStrategy {
+pub unsafe trait PartitioningStrategy {
     type Shape: Copy;
     type View<'a, T: 'a>;
     type ViewMut<'a, T: 'a>;
@@ -138,7 +138,7 @@ impl<'a, T, S: PartitioningStrategy> Region<'a, T, S> {
 
 // linear1d
 pub struct Linear1D;
-impl PartitioningStrategy for Linear1D {
+unsafe impl PartitioningStrategy for Linear1D {
     type Shape = ();
     type View<'a, T: 'a> = &'a T;
     type ViewMut<'a, T: 'a> = &'a mut T;
@@ -189,7 +189,7 @@ impl<'a, T> StencilViewMut<'a, T> {
 }
 
 pub struct Stencil2D<const RADIUS: usize>;
-impl<const R: usize> PartitioningStrategy for Stencil2D<R> {
+unsafe impl<const R: usize> PartitioningStrategy for Stencil2D<R> {
     type Shape = (usize, usize);
     type View<'a, T: 'a> = &'a T;
     type ViewMut<'a, T: 'a> = StencilViewMut<'a, T>;
@@ -242,7 +242,7 @@ impl<'a, T> StrideViewMut<'a, T> {
 }
 
 pub struct Stride2D<const W: usize, const H: usize, const SX: usize, const SY: usize>;
-impl<const W: usize, const H: usize, const SX: usize, const SY: usize> PartitioningStrategy
+unsafe impl<const W: usize, const H: usize, const SX: usize, const SY: usize> PartitioningStrategy
     for Stride2D<W, H, SX, SY>
 {
     type Shape = (usize, usize);
@@ -330,7 +330,7 @@ fn main() {
         block_dim = [2, 2, 1],
         args = (&mut reg_stencil,),
     };
-    // thread (0, 0, 0) will have center on (x, y) = 1 (index = 5), so (1 + 4 + 1) / 3 = 20
+    // thread (0, 0, 0) will have center on (x, y) = 1 (index = 5), so (1 + 4 + 1) / 3 = 2
     assert_eq!(grid[5], 2.0);
 
     // stride2d
