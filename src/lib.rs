@@ -3,16 +3,14 @@
 #![allow(improper_ctypes)]
 #![allow(improper_gpu_kernel_arg)]
 #![allow(improper_ctypes_definitions)]
-
 #![feature(gpu_offload)]
-
 #![cfg_attr(target_arch = "nvptx64", feature(stdarch_nvptx))]
 #![cfg_attr(target_arch = "nvptx64", no_std)]
 
 pub use core::offload::offload_kernel;
 
-pub mod partition;
 pub mod gpu;
+pub mod partition;
 
 #[macro_export]
 macro_rules! offload {

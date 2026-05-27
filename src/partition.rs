@@ -73,20 +73,52 @@ unsafe impl PartitioningStrategy for Linear1D {
     }
 }
 
-// stencil2d
-pub struct StencilViewMut<'a, T> {
-    base_ptr: *mut T,
-    center_idx: usize,
-    cols: usize,
-    _marker: core::marker::PhantomData<&'a mut T>,
-}
-impl<'a, T> StencilViewMut<'a, T> {
-    pub fn set_center(&mut self, val: T) {
-        unsafe {
-            *self.base_ptr.add(self.center_idx) = val;
+// linear2d
+pub struct Linear2D;
+unsafe impl PartitioningStrategy for Linear2D {
+    type Shape = (usize, usize);
+    type View<'a, T: 'a> = &'a T;
+    type ViewMut<'a, T: 'a> = &'a mut T;
+
+    unsafe fn get<'a, T>(
+        ptr: *const T,
+        len: usize,
+        shape: Self::Shape,
+    ) -> Option<Self::View<'a, T>> {
+        let tid = global_thread_dim();
+        let idx = tid.y * shape.0 + tid.x;
+        if idx < len {
+            Some(unsafe { &*ptr.add(idx) })
+        } else {
+            None
         }
     }
+    unsafe fn get_mut<'a, T>(
+        ptr: *mut T,
+        len: usize,
+        shape: Self::Shape,
+    ) -> Option<Self::ViewMut<'a, T>> {
+        let tid = global_thread_dim();
+        let idx = tid.y * shape.0 + tid.x;
+        if idx < len {
+            Some(unsafe { &mut *ptr.add(idx) })
+        } else {
+            None
+        }
+    }
+}
 
+// stencil2d
+pub struct Stencil2D<const RADIUS: usize>;
+
+pub struct StencilView<'a, T> {
+    base_ptr: *const T,
+    center_idx: usize,
+    cols: usize,
+    _marker: core::marker::PhantomData<&'a T>,
+}
+
+impl<'a, T> StencilView<'a, T> {
     pub fn get_neighbour(&self, ox: isize, oy: isize) -> &T {
         unsafe {
             &*self
@@ -96,38 +128,35 @@ impl<'a, T> StencilViewMut<'a, T> {
     }
 }
 
-pub struct Stencil2D<const RADIUS: usize>;
 unsafe impl<const R: usize> PartitioningStrategy for Stencil2D<R> {
     type Shape = (usize, usize);
-    type View<'a, T: 'a> = &'a T;
-    type ViewMut<'a, T: 'a> = StencilViewMut<'a, T>;
+    type View<'a, T: 'a> = StencilView<'a, T>;
+    type ViewMut<'a, T: 'a> = core::marker::PhantomData<&'a mut T>;
 
-    unsafe fn get<'a, T>(_: *const T, _: usize, _: Self::Shape) -> Option<Self::View<'a, T>> {
-        unimplemented!()
-    }
-    unsafe fn get_mut<'a, T>(
-        ptr: *mut T,
+    unsafe fn get<'a, T>(
+        ptr: *const T,
         len: usize,
         shape: Self::Shape,
-    ) -> Option<Self::ViewMut<'a, T>> {
+    ) -> Option<Self::View<'a, T>> {
+        let (cols, _rows) = shape;
         let tid = global_thread_dim();
-        let x = tid.x + R;
-        let y = tid.y + R;
-        if x < shape.0 - R && y < shape.1 - R {
-            let center_idx = y * shape.0 + x;
-            if center_idx < len {
-                Some(StencilViewMut {
-                    base_ptr: ptr,
-                    center_idx,
-                    cols: shape.0,
-                    _marker: core::marker::PhantomData,
-                })
-            } else {
-                None
-            }
+
+        let center_idx = tid.y * cols + tid.x;
+
+        if center_idx < len {
+            Some(StencilView {
+                base_ptr: ptr,
+                center_idx,
+                cols,
+                _marker: core::marker::PhantomData,
+            })
         } else {
             None
         }
+    }
+
+    unsafe fn get_mut<'a, T>(_: *mut T, _: usize, _: Self::Shape) -> Option<Self::ViewMut<'a, T>> {
+        None
     }
 }
 
